@@ -29,6 +29,8 @@ landmark_predictor = dlib.shape_predictor(dat_path)
 @app.before_request
 def log_request_info():
     print(request.headers)
+    print(f"Form Data: {request.form}")
+    print(f"Files: {request.files}")
 """
 # 웹 페이지 렌더링을 위한 라우트
 @app.route('/', methods=["GET", "POST"])
@@ -39,6 +41,70 @@ Keyword arguments:
 argument -- description
 Return: return_description
 """
+
+@app.route('/upload', methods=['POST'])
+def detect_face_shape():
+    # 이미지와 userId가 요청에 포함되어 있는지 확인
+    if 'image' not in request.files or request.files['image'].filename == '':
+        return jsonify({"error": "No image file provided"}), 400
+    
+    try:
+        # 이미지 읽기
+        image_file = request.files['image'].read()
+        img = preprocess_image(image_file)
+        if img is None:
+            return jsonify({"error": "Invalid or corrupt image"}), 400
+
+        # 얼굴 감지
+        faces = face_detector(img)
+        if len(faces) == 0:
+            return jsonify({"error": "No face detected"}), 400
+
+        # 얼굴형 분류
+        for face in faces:
+            landmarks = landmark_predictor(img, face)
+            face_shape = classify_face_shape(landmarks)
+            if face_shape and face_shape != "Unknown":
+                """
+                response = requests.post(
+                    'http://localhost:8080/faceshape/save/{userId}'.format(userId=user_id),
+                    json={"faceShape": face_shape})
+                response.raise_for_status()
+                """
+                return jsonify({"face_shape": face_shape}), 200
+
+        return jsonify({"error": "Unable to determine face shape"}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+if __name__ == "__main__":
+    app.run(debug=False, host="0.0.0.0", port=6543)
+
+
+
+"""
+cap = cv2.VideoCapture(0) # 노트북 웹캠을 카메라로 사용
+cap.set(3,640) # 너비
+cap.set(4,480) # 높이
+
+# Check if camera opened successfully
+if not cap.isOpened():
+    print("Error opening video stream or file")
+    exit() # Exit the script if camera cannot be opened
+
+ret, frame = cap.read() # 사진 촬영
+
+# Check if frame is read correctly
+if not ret:
+    print("Error reading frame")
+    exit() # Exit the script if frame cannot be read
+
+frame = cv2.flip(frame, 1) # 좌우 대칭
+
+cv2.imwrite('self camera test.jpg', frame) # 사진 저장
+
+cap.release()
+cv2.destroyAllWindows()
 
 # Dlib 모델 로드: 얼굴 감지 및 랜드마크 추출
 face_detector = dlib.get_frontal_face_detector()
@@ -112,9 +178,7 @@ def detect_face_shape():
             face_shape = classify_face_shape(landmarks_aligned)
             # 결과 반환
             return render_template('index.html', result=f"Detected Face Shape: {face_shape}")
-            #break
-
-            """
+            break
             # 얼굴형 결과를 Spring 서버에 저장
     try:
         response = requests.post(
@@ -124,14 +188,15 @@ def detect_face_shape():
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         return jsonify({"error": "Failed to save face shape in backend", "details": str(e)}), 500
-            """
+            
     # 성공적으로 처리된 결과 반환
     return jsonify({"face_shape": face_shape})
 
 # Flask 앱 실행
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0', port=5001)
+        app.run(host='0.0.0.0', port=5000)
     except SystemExit:
         print("Flask app exited with SystemExit")
 
+"""
