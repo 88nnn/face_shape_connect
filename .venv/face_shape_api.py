@@ -28,7 +28,7 @@ landmark_predictor = dlib.shape_predictor(dat_path)
 
 @app.before_request
 def log_request_info():
-    print(request.headers)
+    print(f"Headers: {request.headers}")
     print(f"Form Data: {request.form}")
     print(f"Files: {request.files}")
 """
@@ -36,11 +36,11 @@ def log_request_info():
 @app.route('/', methods=["GET", "POST"])
 def index():
     return render_template('index.html', result="Upload an image to detect face shape.")
-
-Keyword arguments:
-argument -- description
-Return: return_description
 """
+"""
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def detect_face_shape():
@@ -54,6 +54,29 @@ def detect_face_shape():
         img = preprocess_image(image_file)
         if img is None:
             return jsonify({"error": "Invalid or corrupt image"}), 400
+"""
+user_id = 2
+@app.route('/', methods=["GET", "POST"])
+# 얼굴형 판독 및 저장 API
+@app.route('/upload', methods=['POST'])
+@app.route('/faceshape/save', methods=['POST'])
+def detect_face_shape():
+    try:
+    # 이미지와 userId가 요청에 포함되어 있는지 확인
+        if 'image' not in request.files:
+             image_file = request.files['image'].read()
+             if image_file.filename == '':
+                return jsonify({"error": "No image selected"}), 400
+             # 이미지 처리 로직
+             response = {"message": "Image received and saved successfully"}
+             return jsonify(response)
+        
+        # 이미지 전처리 (크기 조정, 색상 변환 등)
+        img = preprocess_image(image_file)
+        if img is None:
+            return jsonify({"error": "No image detected in the uploaded file"}), 400
+        if img.filename == '':
+            return jsonify({"error": "Empty file name"}), 400
 
         # 얼굴 감지
         faces = face_detector(img)
@@ -64,21 +87,25 @@ def detect_face_shape():
         for face in faces:
             landmarks = landmark_predictor(img, face)
             face_shape = classify_face_shape(landmarks)
+            app.logger.info(f"Face shape detected: {face_shape}")
             if face_shape and face_shape != "Unknown":
-                """
                 response = requests.post(
                     'http://localhost:8080/faceshape/save/{userId}'.format(userId=user_id),
-                    json={"faceShape": face_shape})
+                    json={"faceShape": face_shape}
+                )
                 response.raise_for_status()
-                """
+                app.logger.info(f"POST response: {response.status_code}, {response.text}")
+
                 return jsonify({"face_shape": face_shape}), 200
-
-        return jsonify({"error": "Unable to determine face shape"}), 500
-
+            
+        return jsonify({"error": "Unable to classify face shape"}), 400
+                
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            app.logger.error(f"An error occurred: {e}")
+            return jsonify({"error": str(e)}), 500
+    
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=6543)
+    app.run(debug=True, host="0.0.0.0", port=5000)
 
 
 
