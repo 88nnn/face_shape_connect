@@ -5,9 +5,10 @@ import numpy as np
 import dlib
 from PIL import Image as PILImage
 import requests  # Flask와 Spring 서버 간 통신을 위한 requests 모듈 추가
-from preprocess_image import preprocess_image
-from classify_face_shape import classify_face_shape
-from align_face import align_face
+from face_shape_classify.preprocess_image import preprocess_image
+from face_shape_classify.classify_face_shape import classify_face_shape
+from face_shape_classify.align_face import align_face
+
 import os
 
 # Flask 앱 초기화
@@ -32,7 +33,6 @@ def log_request_info():
     print(f"Form Data: {request.form}")
     print(f"Files: {request.files}")
 
-user_id = 2
 @app.route('/', methods=["GET", "POST"])
 # 얼굴형 판독 및 저장 API
 @app.route('/upload', methods=['POST'])
