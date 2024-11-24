@@ -26,7 +26,8 @@ def align_face(image_path):
     if len(faces) == 0:
         print("현재 카메라로 얼굴을 감지할 수 없습니다. 재시도해주세요.\nNo face detected")
         return None
-
+    
+    aligned_faces = []
     for face in faces:
         landmarks = landmark_predictor(image, face)
 
@@ -42,4 +43,11 @@ def align_face(image_path):
         # 이미지 중앙을 기준으로 회전 행렬 생성
         center = tuple(np.array(image.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(center, angle, 1.0)
-        return cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+        #return cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+        # 회전된 이미지 생성
+        rotated_image = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+
+        aligned_faces.append(rotated_image)  # 회전된 얼굴 이미지 저장
+
+    # 여러 얼굴이 있을 경우, 첫 번째 얼굴을 반환
+    return aligned_faces[0] if aligned_faces else None
